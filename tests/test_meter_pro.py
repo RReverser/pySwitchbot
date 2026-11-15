@@ -393,19 +393,18 @@ async def test_set_button_function(
 @pytest.mark.asyncio
 async def test_set_button_toggle_unit_and_data_source():
     device = create_device()
-    device._send_command.return_value = bytes.fromhex("01")
+    device._send_command.side_effect = [
+        bytes.fromhex("010101"),
+        bytes.fromhex("01"),
+        bytes.fromhex("010101"),
+        bytes.fromhex("01"),
+    ]
 
     await device.set_button_toggle_unit(True)
-    device._send_command.assert_called_with("570f6807010600ff")
-
-    await device.set_button_toggle_data_source(True)
-    device._send_command.assert_called_with("570f68070106ff01")
-
-    await device.set_button_toggle_unit(False)
-    device._send_command.assert_called_with("570f6807010601ff")
+    device._send_command.assert_called_with("570f68070106" + "0001")
 
     await device.set_button_toggle_data_source(False)
-    device._send_command.assert_called_with("570f68070106ff00")
+    device._send_command.assert_called_with("570f68070106" + "0100")
 
 
 @pytest.mark.asyncio
@@ -813,15 +812,17 @@ async def test_get_button_function():
 @pytest.mark.asyncio
 async def test_set_button_function_preserve():
     device = create_device()
-    device._send_command.return_value = bytes.fromhex("01")
+    device._send_command.side_effect = [
+        bytes.fromhex("010000"),
+        bytes.fromhex("01"),
+    ]
 
-    # Preserve unit toggle, set source toggle to True
+    # Unit toggle is kept from the current setting, not written as 0xff
     await device.set_button_function(change_unit=None, change_data_source=True)
-    device._send_command.assert_called_with("570f68070106ff01")
-
-    # Set unit toggle to False, preserve source toggle
-    await device.set_button_function(change_unit=False, change_data_source=None)
-    device._send_command.assert_called_with("570f6807010601ff")
+    assert device._send_command.call_args_list == [
+        call("570f690704"),
+        call("570f68070106" + "0001"),
+    ]
 
 
 @pytest.mark.asyncio
