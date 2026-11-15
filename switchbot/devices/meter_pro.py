@@ -452,17 +452,18 @@ class SwitchbotMeterPro(SwitchbotDevice):
         change_unit: True to enable ℃/℉ toggle, False to disable, None to preserve setting.
         change_data_source: True to enable indoor/outdoor display toggle, False to disable, None to preserve setting.
         """
-        if change_unit is None:
-            change_unit_byte = "ff"
-        else:
-            self._button_change_unit = change_unit
-            change_unit_byte = "00" if change_unit else "01"
+        if change_unit is None or change_data_source is None:
+            # The meter stores 0xff as is, so write back the current values.
+            current = await self.get_button_function()
+            if change_unit is None:
+                change_unit = current["change_unit"]
+            if change_data_source is None:
+                change_data_source = current["change_data_source"]
 
-        if change_data_source is None:
-            change_data_source_byte = "ff"
-        else:
-            self._button_change_data_source = change_data_source
-            change_data_source_byte = "01" if change_data_source else "00"
+        self._button_change_unit = change_unit
+        change_unit_byte = "00" if change_unit else "01"
+        self._button_change_data_source = change_data_source
+        change_data_source_byte = "01" if change_data_source else "00"
 
         payload = f"{COMMAND_BUTTON_FUNCTION}{change_unit_byte}{change_data_source_byte}"
         result = await self._send_command(payload)
